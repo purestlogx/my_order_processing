@@ -245,7 +245,7 @@ const firebaseConfig={
 };
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
-auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+
 const db=firebase.firestore();
 const CONFIG_DOC=db.collection('my_order_tool').doc('config');
 
@@ -270,7 +270,8 @@ function doLogin(){
   const err=document.getElementById('li-err');
   if(!email||!pw){err.textContent='Please enter email and password.';return}
   btn.disabled=true;btn.textContent='Signing in…';err.textContent='';
-  auth.signInWithEmailAndPassword(email,pw)
+  auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
+    .then(()=>auth.signInWithEmailAndPassword(email,pw))
     .catch(e=>{
       err.textContent=e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'||e.code==='auth/user-not-found'
         ?'Incorrect email or password.'
