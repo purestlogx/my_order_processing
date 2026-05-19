@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MY Order Processing Tool · Purest Nest</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=EB+Garamond:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#FDF8F2;
+  --teal:#004C4F;
+  --teal-light:rgba(0,76,79,0.07);
+  --teal-border:rgba(0,76,79,0.18);
+  --moss:#375428;
+  --border:rgba(0,76,79,0.12);
+  --shadow:rgba(43,41,37,0.08);
+  --text:#2B2925;
+  --text-secondary:#6B6560;
+  --text-tertiary:#A09890;
+  --radius:14px;
+  --radius-sm:8px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── Login screen ─────────────────────────────────── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.login-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:36px 32px;width:100%;max-width:380px;box-shadow:0 4px 24px var(--shadow);text-align:center}
+.login-brand{font-family:'EB Garamond',serif;font-size:22px;font-weight:500;color:var(--teal);margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--text-tertiary);margin-bottom:28px;letter-spacing:0.03em}
+.login-label{display:block;text-align:left;font-size:11px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px}
+.login-input{width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:13.5px;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;margin-bottom:14px;transition:border-color 0.15s}
+.login-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,76,79,0.1)}
+.btn-login{width:100%;background:var(--teal);color:#fff;border:none;padding:12px;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;letter-spacing:0.09em;text-transform:uppercase;cursor:pointer;transition:all 0.18s;margin-top:4px}
+.btn-login:hover:not(:disabled){background:var(--moss)}
+.btn-login:disabled{opacity:0.5;cursor:not-allowed}
+.login-err{font-size:12px;color:#c0392b;margin-top:10px;min-height:18px}
+
+/* ── Main app ─────────────────────────────────────── */
+#main-screen{display:none;padding:24px 16px}
+.wrap{max-width:840px;margin:0 auto}
+
+.hdr{background:var(--teal);color:#fff;padding:18px 22px;border-radius:var(--radius);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:0 4px 18px rgba(0,76,79,0.22)}
+.hdr-left{display:flex;align-items:center;gap:14px}
+.hdr-badge{background:rgba(255,255,255,0.15);border-radius:var(--radius-sm);padding:6px 13px;font-family:'EB Garamond',serif;font-size:14px;font-weight:500;white-space:nowrap}
+.hdr-text h1{font-family:'EB Garamond',serif;font-size:19px;font-weight:500}
+.hdr-text p{font-size:11.5px;opacity:0.6;margin-top:2px;letter-spacing:0.02em}
+.hdr-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.hdr-user{font-size:11.5px;opacity:0.7;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-logout{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:var(--radius-sm);padding:5px 11px;font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:500;cursor:pointer;transition:background 0.14s;white-space:nowrap}
+.btn-logout:hover{background:rgba(255,255,255,0.22)}
+
+/* save indicator */
+.save-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-left:6px;vertical-align:middle;transition:background 0.3s}
+.save-dot.saving{background:#f59e0b}
+.save-dot.saved{background:rgba(255,255,255,0.4)}
+.save-dot.error{background:#ef4444}
+
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;box-shadow:0 1px 4px var(--shadow)}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;user-select:none;transition:background 0.14s}
+.ch:hover{background:var(--teal-light)}
+.ch.open{border-bottom:1px solid var(--border)}
+.ct{display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:500;color:var(--text)}
+.ci{width:32px;height:32px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;letter-spacing:0.03em;background:var(--teal-light);color:var(--teal)}
+.chev{font-size:10px;color:var(--text-tertiary);transition:transform 0.2s}
+.chev.up{transform:rotate(180deg)}
+.cb{display:none;padding:18px}
+.cb.open{display:block}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{padding:8px 10px;background:var(--teal-light);border:1px solid var(--border);text-align:left;font-size:10.5px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:0.06em}
+td{padding:5px 7px;border:1px solid var(--border);background:#fff}
+tr:hover td{background:var(--teal-light)}
+
+input[type=text],input[type=number]{width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 9px;font-size:12.5px;color:var(--text);background:#fff;outline:none;font-family:'DM Sans',sans-serif}
+input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,76,79,0.1)}
+
+button{font-family:'DM Sans',sans-serif;cursor:pointer;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;color:var(--text);font-size:12px;font-weight:500;padding:6px 12px;transition:all 0.14s;letter-spacing:0.02em}
+button:hover{background:var(--teal-light);border-color:var(--teal-border)}
+button:active{transform:scale(0.97)}
+.btn-del{background:#fff5f5;border-color:#fbd0d0;color:#c0392b;font-size:11px;padding:4px 9px}
+.btn-del:hover{background:#fee2e2;border-color:#fca5a5}
+.add-row{display:flex;justify-content:flex-end;margin-top:10px}
+
+.ug{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ul{font-size:10.5px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px}
+.uz{position:relative;border:2px dashed var(--teal-border);border-radius:var(--radius);padding:20px 14px;text-align:center;cursor:pointer;transition:all 0.18s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:115px;background:#fff}
+.uz:hover,.uz.drag{border-color:var(--teal);background:var(--teal-light)}
+.uz.done{border-color:var(--moss);border-style:solid;background:rgba(55,84,40,0.05)}
+.uz input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.uz-icon{font-size:22px;margin-bottom:2px;opacity:0.65}
+.uz-lbl{font-size:13px;font-weight:500;color:var(--text)}
+.uz-sub{font-size:11.5px;color:var(--text-tertiary)}
+.uz-ok{font-size:12px;font-weight:600;color:var(--moss)}
+
+.bcard{border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;background:var(--teal-light)}
+.bhead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.blbl{font-size:11.5px;font-weight:600;color:var(--teal);white-space:nowrap}
+.crow{display:flex;gap:6px;align-items:center;margin-bottom:5px}
+.crow input:first-child{flex:1}
+.cqty{width:65px !important;flex:none !important}
+.clbl{font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:6px}
+.empty{text-align:center;padding:16px 0;font-size:12.5px;color:var(--text-tertiary)}
+.hint{font-size:11.5px;color:var(--text-tertiary);margin-bottom:13px;line-height:1.6}
+
+.gsec{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:26px;text-align:center;box-shadow:0 1px 4px var(--shadow)}
+.gsec-title{font-family:'EB Garamond',serif;font-size:18px;font-weight:400;color:var(--text);margin-bottom:16px}
+.btn-gen{background:var(--teal);color:#fff;border:none;padding:13px 40px;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;display:inline-flex;align-items:center;gap:9px;transition:all 0.18s;cursor:pointer;box-shadow:0 3px 12px rgba(0,76,79,0.28)}
+.btn-gen:hover:not(:disabled){background:var(--moss);transform:translateY(-1px);box-shadow:0 5px 18px rgba(0,76,79,0.3)}
+.btn-gen:active:not(:disabled){transform:scale(0.98)}
+.btn-gen:disabled{opacity:0.32;cursor:not-allowed;transform:none;box-shadow:none}
+
+.status{margin-top:14px;font-size:12.5px;border-radius:var(--radius-sm);padding:12px 15px;display:none;text-align:left;line-height:1.6}
+.status.show{display:block}
+.si{background:rgba(0,76,79,0.06);border:1px solid var(--teal-border);color:var(--teal)}
+.sok{background:rgba(55,84,40,0.07);border:1px solid rgba(55,84,40,0.25);color:var(--moss)}
+.serr{background:#fff5f5;border:1px solid #fbd0d0;color:#c0392b}
+.status ul{margin:6px 0 0 16px}.status li{margin-top:3px}
+
+.og{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.oc{border:1px solid rgba(55,84,40,0.22);border-radius:var(--radius-sm);padding:14px 16px;background:rgba(55,84,40,0.06);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.on{font-size:13px;font-weight:500;color:var(--moss)}
+.om{font-size:11.5px;color:var(--text-secondary);margin-top:2px}
+.btn-dl{background:var(--moss);border:none;color:#fff;padding:8px 16px;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;text-decoration:none;display:inline-block;cursor:pointer;transition:opacity 0.15s}
+.btn-dl:hover{opacity:0.85}
+.footer{text-align:center;margin-top:18px;font-size:11px;color:var(--text-tertiary);letter-spacing:0.03em}
+</style>
+</head>
+<body>
+
+<!-- ── Login Screen ───────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-brand">Purest Nest</div>
+    <div class="login-sub">MY ORDER PROCESSING TOOL</div>
+    <label class="login-label">Email</label>
+    <input class="login-input" id="li-email" type="email" placeholder="you@thepurestgroup.com" autocomplete="email">
+    <label class="login-label">Password</label>
+    <input class="login-input" id="li-pw" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-login" id="li-btn" onclick="doLogin()">Sign in</button>
+    <div class="login-err" id="li-err"></div>
+  </div>
+</div>
+
+<!-- ── Main Screen ────────────────────────────────── -->
+<div id="main-screen">
+<div class="wrap">
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="hdr-badge">Purest Nest</div>
+      <div class="hdr-text">
+        <h1>MY Order Processing Tool</h1>
+        <p>Outbound Template &amp; SPX AWB generator &middot; Malaysia Operations</p>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <span class="hdr-user" id="hdr-user"></span>
+      <button class="btn-logout" onclick="doLogout()">Sign out</button>
+      <span class="save-dot saved" id="save-dot" title="Config sync status"></span>
+    </div>
+  </div>
+
+  <!-- Weight Rules -->
+  <div class="card">
+    <div class="ch" id="h-weight" onclick="tog('weight')">
+      <div class="ct"><div class="ci">WT</div>SKU weight rules</div>
+      <span class="chev" id="v-weight">&#9660;</span>
+    </div>
+    <div class="cb" id="b-weight">
+      <p class="hint">Rules are checked top-to-bottom. SKU must start with <strong>prefix</strong> AND (if set) end with <strong>suffix</strong>. Leave suffix blank to match any ending. Changes are saved automatically.</p>
+      <table>
+        <thead><tr><th>SKU prefix</th><th>SKU suffix <span style="font-weight:400;text-transform:none;font-size:10px">(blank = any)</span></th><th style="width:120px">Weight (KG)</th><th style="width:42px"></th></tr></thead>
+        <tbody id="wtb"></tbody>
+      </table>
+      <div class="add-row"><button onclick="addW()">+ Add rule</button></div>
+    </div>
+  </div>
+
+  <!-- Bundle Expansion -->
+  <div class="card">
+    <div class="ch" id="h-bundle" onclick="tog('bundle')">
+      <div class="ct"><div class="ci">BX</div>Bundle SKU expansion</div>
+      <span class="chev" id="v-bundle">&#9660;</span>
+    </div>
+    <div class="cb" id="b-bundle">
+      <p class="hint">Manual override mappings for bundle SKUs (PN-BU-, PN-VB-, PN-BUNDLE-). These take priority over auto-decoding. Changes are saved automatically.</p>
+      <div id="blist"></div>
+      <div class="add-row"><button onclick="addB()">+ Add bundle SKU</button></div>
+    </div>
+  </div>
+
+  <!-- Upload -->
+  <div class="card">
+    <div class="ch open" id="h-upload" onclick="tog('upload')">
+      <div class="ct"><div class="ci">UP</div>Upload &amp; input</div>
+      <span class="chev up" id="v-upload">&#9660;</span>
+    </div>
+    <div class="cb open" id="b-upload">
+      <div class="ug">
+        <div>
+          <div class="ul">1 &middot; Shopify export</div>
+          <div class="uz" id="z-shopify" ondragover="dov(event,'shopify')" ondragleave="dlv('shopify')" ondrop="drp(event,'shopify')">
+            <input type="file" accept=".csv" onchange="onfc(this,'shopify')">
+            <div class="uz-icon">&#128722;</div>
+            <div class="uz-lbl">orders_export.csv</div>
+            <div class="uz-sub" id="s-shopify">Click or drag &amp; drop</div>
+          </div>
+        </div>
+        <div>
+          <div class="ul">2 &middot; Failed order IDs <span style="font-weight:400;text-transform:none;font-size:10px">(optional)</span></div>
+          <textarea id="failed-input" placeholder="Paste failed order IDs here, one per line&#10;&#10;#418973&#10;#418974&#10;#418975" oninput="onFailedInput(this)" style="width:100%;min-height:115px;border:2px dashed rgba(0,76,79,0.18);border-radius:14px;padding:12px 13px;font-size:12.5px;font-family:'DM Sans',sans-serif;color:#2B2925;background:#fff;outline:none;resize:vertical;line-height:1.6;transition:all 0.18s"></textarea>
+          <div id="s-failed" style="font-size:11.5px;color:#A09890;margin-top:6px;min-height:16px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate -->
+  <div class="gsec">
+    <p class="gsec-title">Ready to generate?</p>
+    <button class="btn-gen" id="gbtn" onclick="gen()" disabled>&#9889;&nbsp; Generate files</button>
+    <div class="status" id="stat"></div>
+    <div class="og" id="og" style="display:none"></div>
+  </div>
+
+  <p class="footer">Purest Nest Pte Ltd &middot; Internal Operations Tool</p>
+</div>
+</div>
+
+<script>
+// ─── Firebase init ────────────────────────────────────
+const firebaseConfig={
+  apiKey:"AIzaSyAzibrJ1TCtv6pojhBQYEvxqKtLsWMabs4",
+  authDomain:"purest-sync-tool.firebaseapp.com",
+  projectId:"purest-sync-tool",
+  storageBucket:"purest-sync-tool.firebasestorage.app",
+  messagingSenderId:"634850390349",
+  appId:"1:634850390349:web:6fd3ba4964e2152e55c704",
+  measurementId:"G-H3K641E66B"
+};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+const db=firebase.firestore();
+const CONFIG_DOC=db.collection('my_order_tool').doc('config');
+
+// ─── Default rules ────────────────────────────────────
+const DEFAULT_WR=[
+  {id:1,p:'PN-SB',s:'-15',w:0.6},{id:2,p:'PN-SB',s:'-30',w:1.2},
+  {id:3,p:'PN-SB',s:'-60',w:2.4},{id:4,p:'PN-SB',s:'-90',w:3.6},
+  {id:5,p:'PN-ES',s:'-1',w:0.2},{id:6,p:'PN-ES',s:'-3',w:0.6},
+  {id:7,p:'PN-BU',s:'',w:2.0},{id:8,p:'PN-VB',s:'',w:2.0},
+  {id:9,p:'PN-BUNDLE',s:'',w:2.0}
+];
+
+let wR=JSON.parse(JSON.stringify(DEFAULT_WR));
+let bR=[],shopR=null,failS=null,wId=10,bId=1;
+let saveTimer=null;
+
+// ─── Auth ─────────────────────────────────────────────
+function doLogin(){
+  const email=document.getElementById('li-email').value.trim();
+  const pw=document.getElementById('li-pw').value;
+  const btn=document.getElementById('li-btn');
+  const err=document.getElementById('li-err');
+  if(!email||!pw){err.textContent='Please enter email and password.';return}
+  btn.disabled=true;btn.textContent='Signing in…';err.textContent='';
+  auth.signInWithEmailAndPassword(email,pw)
+    .catch(e=>{
+      err.textContent=e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'||e.code==='auth/user-not-found'
+        ?'Incorrect email or password.'
+        :'Sign in failed. Please try again.';
+      btn.disabled=false;btn.textContent='Sign in';
+    });
+}
+
+function doLogout(){
+  auth.signOut();
+}
+
+auth.onAuthStateChanged(user=>{
+  if(user){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('main-screen').style.display='block';
+    document.getElementById('hdr-user').textContent=user.email;
+    loadConfig();
+  }else{
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('main-screen').style.display='none';
+    const btn=document.getElementById('li-btn');
+    btn.disabled=false;btn.textContent='Sign in';
+  }
+});
+
+// ─── Firestore config ─────────────────────────────────
+async function loadConfig(){
+  try{
+    const snap=await CONFIG_DOC.get();
+    if(snap.exists){
+      const d=snap.data();
+      if(d.weightRules&&d.weightRules.length){
+        wR=d.weightRules;
+        wId=Math.max(...wR.map(r=>r.id))+1;
+      }
+      if(d.bundleRules&&d.bundleRules.length){
+        bR=d.bundleRules;
+        bId=Math.max(...bR.map(b=>b.id))+1;
+      }
+    }
+  }catch(e){console.warn('Config load failed:',e)}
+  rW();rB();
+}
+
+function scheduleSave(){
+  setSaveDot('saving');
+  if(saveTimer)clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{
+    CONFIG_DOC.set({weightRules:wR,bundleRules:bR},{merge:true})
+      .then(()=>setSaveDot('saved'))
+      .catch(e=>{console.error('Save failed:',e);setSaveDot('error');});
+  },1500);
+}
+
+function setSaveDot(state){
+  const dot=document.getElementById('save-dot');
+  dot.className='save-dot '+state;
+  dot.title=state==='saving'?'Saving…':state==='saved'?'All changes saved':'Save failed';
+}
+
+// ─── UI helpers ───────────────────────────────────────
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function tog(n){
+  const bd=document.getElementById('b-'+n),hd=document.getElementById('h-'+n),cv=document.getElementById('v-'+n);
+  const op=bd.classList.toggle('open');hd.classList.toggle('open',op);cv.classList.toggle('up',op);
+}
+
+// ─── Weight rules ─────────────────────────────────────
+function rW(){
+  document.getElementById('wtb').innerHTML=wR.map(r=>`
+    <tr>
+      <td><input type="text" value="${esc(r.p)}" placeholder="e.g. PN-SB" onchange="sw(${r.id},'p',this.value)"></td>
+      <td><input type="text" value="${esc(r.s)}" placeholder="-30 or leave blank" onchange="sw(${r.id},'s',this.value)"></td>
+      <td><input type="number" step="0.1" min="0" value="${r.w}" onchange="sw(${r.id},'w',parseFloat(this.value)||0)" style="width:90px"></td>
+      <td><button class="btn-del" onclick="dW(${r.id})">&#10005;</button></td>
+    </tr>`).join('');
+}
+function sw(id,k,v){const r=wR.find(r=>r.id===id);if(r){r[k]=v;scheduleSave();}}
+function addW(){wR.push({id:wId++,p:'',s:'',w:0});rW();scheduleSave();}
+function dW(id){wR=wR.filter(r=>r.id!==id);rW();scheduleSave();}
+
+// ─── Bundle rules ─────────────────────────────────────
+function rB(){
+  const el=document.getElementById('blist');
+  if(!bR.length){el.innerHTML='<div class="empty">No manual bundle rules defined. Auto-decode is active for all bundles.</div>';return}
+  el.innerHTML=bR.map(b=>`
+    <div class="bcard">
+      <div class="bhead">
+        <span class="blbl">Bundle SKU:</span>
+        <input type="text" value="${esc(b.sku)}" placeholder="e.g. PN-BUNDLE-CGB610-CGSS610" onchange="sbs(${b.id},this.value)" style="flex:1">
+        <button class="btn-del" onclick="dB(${b.id})" style="white-space:nowrap">&#10005; Remove</button>
+      </div>
+      <div class="clbl">Component SKUs &amp; quantities (per bundle unit):</div>
+      ${b.comps.map((c,i)=>`
+        <div class="crow">
+          <input type="text" value="${esc(c.sku)}" placeholder="Component SKU" onchange="sbc(${b.id},${i},'sku',this.value)">
+          <input type="number" class="cqty" value="${c.qty}" min="1" title="Qty per bundle" onchange="sbc(${b.id},${i},'qty',parseInt(this.value)||1)">
+          <button class="btn-del" onclick="dbc(${b.id},${i})">&#10005;</button>
+        </div>`).join('')}
+      <button onclick="addbc(${b.id})" style="margin-top:6px;font-size:11px">+ Component</button>
+    </div>`).join('');
+}
+function sbs(id,v){const b=bR.find(b=>b.id===id);if(b){b.sku=v;scheduleSave();}}
+function sbc(bid,ci,k,v){const b=bR.find(b=>b.id===bid);if(b&&b.comps[ci]){b.comps[ci][k]=v;scheduleSave();}}
+function addB(){bR.push({id:bId++,sku:'',comps:[{sku:'',qty:1}]});rB();scheduleSave();if(!document.getElementById('b-bundle').classList.contains('open'))tog('bundle');}
+function dB(id){bR=bR.filter(b=>b.id!==id);rB();scheduleSave();}
+function addbc(bid){const b=bR.find(b=>b.id===bid);if(b){b.comps.push({sku:'',qty:1});rB();scheduleSave();}}
+function dbc(bid,ci){const b=bR.find(b=>b.id===bid);if(b){b.comps.splice(ci,1);rB();scheduleSave();}}
+
+// ─── File upload ──────────────────────────────────────
+function dov(e,z){e.preventDefault();document.getElementById('z-'+z).classList.add('drag')}
+function dlv(z){document.getElementById('z-'+z).classList.remove('drag')}
+function drp(e,z){e.preventDefault();const f=e.dataTransfer.files[0];if(f)rf(f,z);document.getElementById('z-'+z).classList.remove('drag')}
+function onfc(inp,z){if(inp.files[0])rf(inp.files[0],z)}
+
+function rf(file){
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    const ze=document.getElementById('z-shopify'),se=document.getElementById('s-shopify');
+    ze.classList.add('done');
+    shopR=pCSV(ev.target.result);
+    se.className='uz-ok';
+    se.textContent='\u2713 '+file.name+' \u00b7 '+shopR.length+' rows';
+    document.getElementById('gbtn').disabled=!shopR;
+  };
+  rd.readAsText(file);
+}
+
+function onFailedInput(ta){
+  const ids=new Set(ta.value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean));
+  const se=document.getElementById('s-failed');
+  if(ids.size>0){
+    failS=ids;
+    se.textContent='\u2713 '+ids.size+' order ID'+(ids.size===1?'':'s')+' entered';
+    se.style.color='#375428';
+    ta.style.borderColor='rgba(55,84,40,0.5)';ta.style.borderStyle='solid';ta.style.background='rgba(55,84,40,0.04)';
+  }else{
+    failS=null;se.textContent='';
+    ta.style.borderColor='rgba(0,76,79,0.18)';ta.style.borderStyle='dashed';ta.style.background='#fff';
+  }
+}
+
+// ─── CSV parser ───────────────────────────────────────
+function pCSV(txt){
+  const lines=[];let buf='',inQ=false;
+  for(let i=0;i<txt.length;i++){
+    const c=txt[i];
+    if(c==='"'){inQ=!inQ;buf+=c}
+    else if(c==='\n'&&!inQ){lines.push(buf);buf=''}
+    else if(c!=='\r'){buf+=c}
+  }
+  if(buf.trim())lines.push(buf);
+  function pr(ln){
+    const f=[];let fd='',iq=false;
+    for(let i=0;i<ln.length;i++){
+      const c=ln[i];
+      if(c==='"'){if(iq&&ln[i+1]==='"'){fd+='"';i++}else{iq=!iq}}
+      else if(c===','&&!iq){f.push(fd);fd=''}
+      else{fd+=c}
+    }
+    f.push(fd);return f;
+  }
+  if(lines.length<2)return[];
+  const hdr=pr(lines[0]);const rows=[];
+  for(let i=1;i<lines.length;i++){
+    if(!lines[i].trim())continue;
+    const v=pr(lines[i]),o={};
+    hdr.forEach((h,idx)=>{o[h.trim()]=(v[idx]||'').trim()});
+    rows.push(o);
+  }
+  return rows;
+}
+
+// ─── Weight lookup ────────────────────────────────────
+function gW(sku){
+  for(const r of wR){
+    if(!r.p||!sku.startsWith(r.p))continue;
+    if(r.s&&!sku.endsWith(r.s))continue;
+    return r.w;
+  }
+  return 0;
+}
+
+// ─── Bundle helpers ───────────────────────────────────
+const BUNDLE_PFX=['PN-BUNDLE-','PN-BU-','PN-VB-'];
+function isB(sku){return BUNDLE_PFX.some(p=>sku.startsWith(p))}
+
+const TOKEN_RULES=[
+  ['90','PN-SB-'],['60','PN-SB-'],['30','PN-SB-'],['15','PN-SB-'],
+  ['3','PN-ES-'],['2','PN-ES-'],['1','PN-ES-']
+];
+function tokenToSku(tok){
+  for(const [sfx,pfx] of TOKEN_RULES){
+    if(tok.endsWith(sfx)){
+      const alpha=tok.slice(0,tok.length-sfx.length);
+      if(alpha)return pfx+alpha+'-'+sfx;
+    }
+  }
+  return null;
+}
+function autoDecode(sku){
+  let rest=sku;
+  for(const p of BUNDLE_PFX){if(sku.startsWith(p)){rest=sku.slice(p.length);break;}}
+  const tokens=rest.split(/[+\-x]/i);
+  const comps=[];
+  for(const tok of tokens){
+    const mapped=tokenToSku(tok);
+    if(mapped)comps.push(mapped);
+    else return null;
+  }
+  return comps;
+}
+function xB(sku,qty){
+  const b=bR.find(b=>b.sku===sku);
+  if(b&&b.comps.length)return{comps:b.comps.filter(c=>c.sku).map(c=>({sku:c.sku,qty:c.qty*qty})),src:'manual'};
+  const decoded=autoDecode(sku);
+  if(decoded)return{comps:decoded.map(s=>({sku:s,qty})),src:'auto'};
+  return{comps:[{sku,qty}],src:'unresolved'};
+}
+
+// ─── SKU expansion ────────────────────────────────────
+function expandSKU(sku,qty){
+  if(sku.startsWith('PN-SB-')){
+    if(sku.endsWith('-60'))return[{sku:sku.slice(0,-3)+'-30',qty:qty*2}];
+    if(sku.endsWith('-90'))return[{sku:sku.slice(0,-3)+'-30',qty:qty*3}];
+  }
+  if(sku.startsWith('PN-ES-')){
+    if(sku.endsWith('-2'))return[{sku:sku.slice(0,-2)+'-1',qty:qty*2}];
+    if(sku.endsWith('-3'))return[{sku:sku.slice(0,-2)+'-1',qty:qty*3}];
+  }
+  return[{sku,qty}];
+}
+
+// ─── Formatters ───────────────────────────────────────
+function clPh(p){return(p||'').replace(/^\+/,'').replace(/[\s\-]/g,'')}
+function clZip(z){
+  const clean=(z||'').replace(/^'+/,'').trim();
+  return clean.startsWith('0')?"'"+clean:clean;
+}
+function rndWt(w){return Math.round(w*100)/100}
+
+// ─── Status ───────────────────────────────────────────
+function showS(msg,cls,items){
+  const el=document.getElementById('stat');
+  el.className='status show '+cls;
+  let h='<span>'+msg+'</span>';
+  if(items&&items.length)h+='<ul>'+items.map(i=>'<li>'+i+'</li>').join('')+'</ul>';
+  el.innerHTML=h;
+}
+
+// ─── Generate ─────────────────────────────────────────
+function gen(){
+  document.getElementById('og').style.display='none';
+  if(typeof XLSX==='undefined'){showS('SheetJS library not loaded. Please check your connection and refresh.','serr');return}
+  showS('Processing\u2026','si');
+  try{
+    const oMap={};
+    for(const row of shopR){
+      const n=(row['Name']||'').trim();
+      if(!n)continue;
+      if(!oMap[n])oMap[n]=[];
+      oMap[n].push(row);
+    }
+    const allOrders=Object.entries(oMap).map(([id,rows])=>({id,rows}));
+    const failSet=failS||new Set();
+    const failedOrders=[],notF=[];
+    for(const id of failSet){
+      if(oMap[id])failedOrders.push({id,rows:oMap[id]});
+      else notF.push(id);
+    }
+    if(!allOrders.length){showS('No orders found in the Shopify export.','serr');return}
+
+    const OC=['outb_flg','externoutbkey01','outb_type','owner','externordorg','externintsource',
+      'alcbforpik_flg','pikbforshp_flg','ordgrp',
+      'shpto_address1','shpto_address2','shpto_address3','shpto_address4','shpto_address5',
+      'shpto_country','shpto_state','shpto_city','shpto_zip',
+      'shpto_name1','shpto_email1','shpto_name1_off','shpto_name1_ext','shpto_name1_hp',
+      'tms_serv_type','tms_serv_code','d_ext_currency','d_ext_line_price','item','pack_id','uom','qtyord'];
+    const OC_DESC=[
+      'Outbound Flag (H=Order Header D=Order Detail)','External Order Number',
+      'Outbound Type (B2C=B2C Orders, B2B=B2B Orders, INT=International Orders)',
+      'Owner ID','External Order Origin','External Interface Source',
+      'Disallow picking if order is not fully allocated',
+      'Disallow shipping if order is not fully picked','Order Group',
+      'Ship To Address 1','Ship To Address 2','Ship To Address 3','Ship To Address 4','Ship To Address 5',
+      'Ship To Country','Ship To State','Ship To City','Ship To Zip',
+      'Ship To Primary Contact Person Name','Ship To Email 1',
+      'Ship To Office Tel1','Ship To Office Ext 1','Ship To Mobile 1',
+      'TMS Service Type','TMS Service Code',
+      '(Details)Currency Code','(Details)Total Line Price',
+      '(Details) Item ID','(Details)Item Pack','(Details)UOM','(Details)Order Qty'
+    ];
+    const obR=[OC,OC_DESC];
+
+    const SC=['*Recipient Name','*Recipient Phone','*Detail Address','Postal Code',
+      '*Parcel Weight (KG)','Parcel Length (CM)','Parcel Width (CM)','Parcel Height (CM)',
+      '*Item Name','Item Quantity','Customer Reference No.',
+      '*COD Collection(Y/N )','COD Amount','*Payment Method','Delivery Instruction',
+      '*Parcel Value (Max 1000 MYR)'];
+    const spR=[SC];
+
+    const mBun=new Set(),uSKU=new Set();
+    let totOB=0;
+
+    // SPX AWB — all orders
+    for(const {id,rows} of allOrders){
+      const h=rows[0];
+      let wt=0;
+      for(const row of rows){
+        const sku=(row['Lineitem sku']||'').trim();
+        const qty=parseInt(row['Lineitem quantity'])||1;
+        if(!sku)continue;
+        const rw=gW(sku);
+        if(rw===0)uSKU.add(sku);
+        wt+=rw*qty;
+      }
+      const addr=[h['Shipping Address1'],h['Shipping Address2'],h['Shipping City'],h['Shipping Province']].filter(Boolean).join(', ');
+      const ph={v:clPh(h['Shipping Phone']),t:'s'};
+      const pz={v:clZip(h['Shipping Zip']),t:'s'};
+      spR.push([h['Shipping Name']||'',ph,addr,pz,rndWt(wt)||'','','','',
+        'Flavoured Drinks for Personal Consumption','',id,'N','','Sender Pay','',300]);
+    }
+
+    // Outbound Template — failed orders only
+    for(const {id,rows} of failedOrders){
+      const h=rows[0];
+      const HR=OC.reduce((o,c)=>{o[c]='';return o},{});
+      Object.assign(HR,{
+        outb_flg:'H',externoutbkey01:id,outb_type:'Normal',
+        owner:'FF-MY-000153',externordorg:'MANUAL',externintsource:'MANUAL',
+        alcbforpik_flg:'Y',pikbforshp_flg:'Y',ordgrp:'NOR-ORD',
+        shpto_address1:h['Shipping Address1']||'',shpto_address2:h['Shipping Address2']||'',
+        shpto_country:h['Shipping Country']||'MY',shpto_state:h['Shipping Province']||'',
+        shpto_city:h['Shipping City']||'',shpto_zip:clZip(h['Shipping Zip']),
+        d_ext_currency:h['Currency']||'MYR',
+        shpto_name1:h['Shipping Name']||'',shpto_email1:h['Email']||'',
+        shpto_name1_hp:clPh(h['Shipping Phone']),tms_serv_type:'PARCEL',tms_serv_code:'Standard'
+      });
+      obR.push(OC.map(c=>HR[c]));totOB++;
+
+      for(const row of rows){
+        const sku=(row['Lineitem sku']||'').trim();
+        const qty=parseInt(row['Lineitem quantity'])||1;
+        if(!sku)continue;
+        let lis=[];
+        if(isB(sku)){
+          const xp=xB(sku,qty);
+          if(xp.src==='unresolved')mBun.add(sku);
+          lis=xp.comps;
+        }else{lis=[{sku,qty}];}
+        for(const li of lis){
+          for(const ex of expandSKU(li.sku,li.qty)){
+            const DR=OC.reduce((o,c)=>{o[c]='';return o},{});
+            Object.assign(DR,{outb_flg:'D',externoutbkey01:id,item:ex.sku,pack_id:ex.sku,uom:'Pieces',qtyord:ex.qty});
+            obR.push(OC.map(c=>DR[c]));totOB++;
+          }
+        }
+      }
+    }
+
+    const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
+
+    // Outbound XLSX
+    const obWb=XLSX.utils.book_new();
+    const obWs=XLSX.utils.aoa_to_sheet(obR);
+    const obRange=XLSX.utils.decode_range(obWs['!ref']);
+    for(let r=2;r<=obRange.e.r;r++){
+      [17,22].forEach(c=>{
+        const ca=XLSX.utils.encode_cell({r,c});
+        if(obWs[ca]){obWs[ca].t='s';obWs[ca].v=String(obWs[ca].v);}
+      });
+    }
+    XLSX.utils.book_append_sheet(obWb,obWs,'Outbound');
+    const obArr=XLSX.write(obWb,{bookType:'xlsx',type:'array'});
+    const obBlob=new Blob([obArr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const obURL=URL.createObjectURL(obBlob);
+
+    // SPX XLSX
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.aoa_to_sheet(spR);
+    XLSX.utils.book_append_sheet(wb,ws,'Mass Order Creation');
+    const xlArr=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    const xlBlob=new Blob([xlArr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const xlURL=URL.createObjectURL(xlBlob);
+
+    const warns=[];
+    if(notF.length)warns.push(notF.length+' failed order ID(s) not found in Shopify export: <em>'+notF.slice(0,6).join(', ')+(notF.length>6?'&hellip;':'')+'</em>');
+    if(mBun.size)warns.push('Could not auto-decode bundle(s): <em>'+[...mBun].join(', ')+'</em> &mdash; kept as-is. Add manual rules in Bundle config.');
+    if(uSKU.size)warns.push('No weight match for SKU(s): <em>'+[...uSKU].join(', ')+'</em> &mdash; counted as 0 kg in SPX.');
+
+    showS('\u2713 Done &middot; <strong>'+(spR.length-1)+' SPX shipments</strong> &middot; <strong>'+failedOrders.length+' failed orders</strong> &middot; '+totOB+' Outbound rows',warns.length?'si':'sok',warns);
+
+    const og=document.getElementById('og');
+    og.style.display='grid';
+    og.innerHTML=`
+      <div class="oc">
+        <div><div class="on">&#128203; Outbound Template</div><div class="om">${totOB} rows &middot; ${failedOrders.length} order${failedOrders.length!==1?'s':''}</div></div>
+        <a href="${obURL}" download="OutboundTemplate_${today}.xlsx" class="btn-dl">Download</a>
+      </div>
+      <div class="oc">
+        <div><div class="on">&#128230; SPX AWB</div><div class="om">${spR.length-1} shipment${(spR.length-1)!==1?'s':''}</div></div>
+        <a href="${xlURL}" download="SPX_AWB_${today}.xlsx" class="btn-dl">Download</a>
+      </div>`;
+
+  }catch(err){showS('Error: '+err.message,'serr');console.error(err);}
+}
+</script>
+</body>
+</html>
