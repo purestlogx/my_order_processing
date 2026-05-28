@@ -245,6 +245,7 @@ const firebaseConfig={
 };
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
+
 const db=firebase.firestore();
 const CONFIG_DOC=db.collection('my_order_tool').doc('config');
 
@@ -269,7 +270,8 @@ function doLogin(){
   const err=document.getElementById('li-err');
   if(!email||!pw){err.textContent='Please enter email and password.';return}
   btn.disabled=true;btn.textContent='Signing in…';err.textContent='';
-  auth.signInWithEmailAndPassword(email,pw)
+  auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
+    .then(()=>auth.signInWithEmailAndPassword(email,pw))
     .catch(e=>{
       err.textContent=e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'||e.code==='auth/user-not-found'
         ?'Incorrect email or password.'
@@ -279,7 +281,37 @@ function doLogin(){
 }
 
 function doLogout(){
+  clearInactivityTimer();
   auth.signOut();
+}
+
+// ─── Inactivity timeout (2 hours) ────────────────────
+const INACTIVITY_MS = 2 * 60 * 60 * 1000;
+let inactivityTimer = null;
+
+function resetInactivityTimer(){
+  clearInactivityTimer();
+  inactivityTimer = setTimeout(()=>{
+    auth.signOut();
+  }, INACTIVITY_MS);
+}
+
+function clearInactivityTimer(){
+  if(inactivityTimer){ clearTimeout(inactivityTimer); inactivityTimer=null; }
+}
+
+function startInactivityWatcher(){
+  ['mousemove','keydown','mousedown','touchstart','scroll','click'].forEach(ev=>{
+    document.addEventListener(ev, resetInactivityTimer, {passive:true});
+  });
+  resetInactivityTimer();
+}
+
+function stopInactivityWatcher(){
+  ['mousemove','keydown','mousedown','touchstart','scroll','click'].forEach(ev=>{
+    document.removeEventListener(ev, resetInactivityTimer);
+  });
+  clearInactivityTimer();
 }
 
 auth.onAuthStateChanged(user=>{
@@ -288,7 +320,9 @@ auth.onAuthStateChanged(user=>{
     document.getElementById('main-screen').style.display='block';
     document.getElementById('hdr-user').textContent=user.email;
     loadConfig();
+    startInactivityWatcher();
   }else{
+    stopInactivityWatcher();
     document.getElementById('login-screen').style.display='flex';
     document.getElementById('main-screen').style.display='none';
     const btn=document.getElementById('li-btn');
@@ -506,7 +540,7 @@ function expandSKU(sku,qty){
 }
 
 // ─── Formatters ───────────────────────────────────────
-function clPh(p){return(p||'').replace(/^\+/,'').replace(/[\s\-]/g,'')}
+function clPh(p){return(p||'').replace(/^'+/,'').replace(/^\+/,'').replace(/[\s\-]/g,'')}
 function clZip(z){
   const clean=(z||'').replace(/^'+/,'').trim();
   return clean.startsWith('0')?"'"+clean:clean;
