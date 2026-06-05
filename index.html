@@ -254,7 +254,7 @@ button:active{transform:scale(0.97)}
 
       <!-- Bundle Expansion -->
       <div class="stab-panel" id="tab-bundle">
-        <p class="hint">The tool auto-decodes bundle SKUs by token suffix (e.g. <code>SOSE30</code> → <code>PN-SB-SOSE-30</code>). Add manual overrides below for non-standard bundles — they take priority. Changes save automatically.</p>
+        <p class="hint">The tool auto-decodes bundle SKUs by token suffix (e.g. <code>SOSE30</code> → <code>PN-SB-SOSE-30</code>). Add manual overrides below for <strong>any SKU</strong> — bundle or regular — to expand it into specific components. Manual rules always take priority over auto-decode. Changes save automatically.</p>
         <div id="blist"></div>
         <div class="add-row"><button id="btn-add-bundle" onclick="addB()">+ Add bundle SKU</button></div>
       </div>
@@ -648,7 +648,7 @@ function gen(){
       obR.push(OC.map(c=>HR[c]));totOB++;
       for(const row of rows){
         const sku=(row['Lineitem sku']||'').trim(),qty=parseInt(row['Lineitem quantity'])||1;if(!sku)continue;
-        let lis=[];if(isB(sku)){const xp=xB(sku,qty);if(xp.src==='unresolved')mBun.add(sku);lis=xp.comps;}else{lis=[{sku,qty}];}
+        let lis=[];const manOvr=bR.find(b=>b.sku===sku);if(manOvr&&manOvr.comps.length){lis=manOvr.comps.filter(c=>c.sku).map(c=>({sku:c.sku,qty:c.qty*qty}));}else if(isB(sku)){const xp=xB(sku,qty);if(xp.src==='unresolved')mBun.add(sku);lis=xp.comps;}else{lis=[{sku,qty}];}
         for(const li of lis){for(const ex of expandSKU(li.sku,li.qty)){const DR=OC.reduce((o,c)=>{o[c]='';return o},{});Object.assign(DR,{outb_flg:'D',externoutbkey01:id,item:ex.sku,pack_id:ex.sku,uom:'Pieces',qtyord:ex.qty});obR.push(OC.map(c=>DR[c]));totOB++;}}
       }
     }
