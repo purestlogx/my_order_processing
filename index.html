@@ -633,14 +633,14 @@ function gen(){
     const OC=['outb_flg','externoutbkey01','outb_type','owner','externordorg','externintsource','alcbforpik_flg','pikbforshp_flg','ordgrp','shpto_address1','shpto_address2','shpto_address3','shpto_address4','shpto_address5','shpto_country','shpto_state','shpto_city','shpto_zip','shpto_name1','shpto_email1','shpto_name1_off','shpto_name1_ext','shpto_name1_hp','tms_serv_type','tms_serv_code','d_ext_currency','d_ext_line_price','item','pack_id','uom','qtyord'];
     const OC_DESC=['Outbound Flag (H=Order Header D=Order Detail)','External Order Number','Outbound Type (B2C=B2C Orders, B2B=B2B Orders, INT=International Orders)','Owner ID','External Order Origin','External Interface Source','Disallow picking if order is not fully allocated','Disallow shipping if order is not fully picked','Order Group','Ship To Address 1','Ship To Address 2','Ship To Address 3','Ship To Address 4','Ship To Address 5','Ship To Country','Ship To State','Ship To City','Ship To Zip','Ship To Primary Contact Person Name','Ship To Email 1','Ship To Office Tel1','Ship To Office Ext 1','Ship To Mobile 1','TMS Service Type','TMS Service Code','(Details)Currency Code','(Details)Total Line Price','(Details) Item ID','(Details)Item Pack','(Details)UOM','(Details)Order Qty'];
     const obR=[OC,OC_DESC];
-    const SC=['*Recipient Name','*Recipient Phone','*Detail Address','Postal Code','*Parcel Weight (KG)','Parcel Length (CM)','Parcel Width (CM)','Parcel Height (CM)','*Item Name','Item Quantity','Customer Reference No.','*COD Collection(Y/N )','COD Amount','*Payment Method','Delivery Instruction','*Parcel Value (Max 1000 MYR)'];
+    const SC=['*Order No.','*Recipient Name','*Recipient Phone','*Detail Address','*Postal Code','*Parcel Weight (KG)','Parcel Length (CM)','Parcel Width (CM)','Parcel Height (CM)','*Item Name','Item Quantity','Item Price','Customer Reference No.','*COD Collection(Y/N )','COD Amount','*Payment Method','Delivery Instruction','*Parcel Value (Max 1000 MYR)'];
     const spR=[SC];const mBun=new Set(),uSKU=new Set();let totOB=0;
 
     for(const {id,rows} of allOrders){
       const h=rows[0];let wt=0;
       for(const row of rows){const sku=(row['Lineitem sku']||'').trim();const qty=parseInt(row['Lineitem quantity'])||1;if(!sku)continue;const rw=gW(sku);if(rw===0)uSKU.add(sku);wt+=rw*qty;}
       const addr=[h['Shipping Address1'],h['Shipping Address2'],h['Shipping City'],h['Shipping Province']].filter(Boolean).join(', ');
-      spR.push([h['Shipping Name']||'',{v:clPh(h['Shipping Phone']),t:'s'},addr,{v:clZip(h['Shipping Zip']),t:'s'},rndWt(wt)||'','','','','Flavoured Drinks for Personal Consumption','',id,'N','','Sender Pay','',300]);
+      spR.push([id,h['Shipping Name']||'',{v:clPh(h['Shipping Phone']),t:'s'},addr,{v:clZip(h['Shipping Zip']),t:'s'},rndWt(wt)||'','','','','Flavoured Drinks for Personal Consumption','',300,id,'N','','Sender Pay','',300]);
     }
     for(const {id,rows} of failedOrders){
       const h=rows[0];const HR=OC.reduce((o,c)=>{o[c]='';return o},{});
